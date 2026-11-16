@@ -2,6 +2,9 @@
   "name": "digital-wellness-hub-backend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "description": "Backend API service for Digital Wellness Hub",
   "main": "dist/server.js",
   "scripts": {
@@ -19,7 +22,6 @@
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "digital-wellness-hub": "file:..",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-rate-limit": "^8.7.2",
