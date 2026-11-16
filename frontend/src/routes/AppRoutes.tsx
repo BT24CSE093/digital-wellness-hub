@@ -36,9 +36,9 @@ import { PublicOnlyRoute } from './PublicOnlyRoute';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 
-// Layout wrapper for general pages that include Navbar & Footer
+// Layout wrapper for general pages that include Navbar & Footer with clean neutral dark theme
 const PageShell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+  <div className="min-h-screen flex flex-col bg-[#0d1117] text-[#e6edf3]">
     <Navbar />
     <main className="flex-1">{children}</main>
     <Footer />

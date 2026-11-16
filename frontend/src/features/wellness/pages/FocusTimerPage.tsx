@@ -259,15 +259,31 @@ export const FocusTimerPage: React.FC = () => {
             )}
           </div>
 
-          {/* Circular Countdown Ring */}
-          <div className="relative flex items-center justify-center my-4">
-            <svg className="w-72 h-72 sm:w-80 sm:h-80 -rotate-90 transform">
-              {/* Background Track */}
+          {/* Circular Countdown Ring with Mindful Breathing Animation */}
+          <div className="relative flex items-center justify-center my-6 group">
+            {/* Ambient Pulse Ring when Active */}
+            {isRunning && (
+              <div
+                className="absolute inset-0 rounded-full animate-ping opacity-15 pointer-events-none"
+                style={{ backgroundColor: MODE_CONFIG[sessionType].ringColor }}
+              />
+            )}
+
+            {/* Glowing Backdrop Filter */}
+            <div
+              className={`absolute w-64 h-64 sm:w-72 sm:h-72 rounded-full blur-2xl transition-all duration-700 pointer-events-none ${
+                isRunning ? 'opacity-25' : 'opacity-10'
+              }`}
+              style={{ backgroundColor: MODE_CONFIG[sessionType].ringColor }}
+            />
+
+            <svg className="w-72 h-72 sm:w-84 sm:h-84 -rotate-90 transform drop-shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+              {/* Background Track with soft gradient stroke */}
               <circle
                 cx="50%"
                 cy="50%"
                 r={radius}
-                className="text-slate-800/80 stroke-current"
+                className="text-slate-800/60 stroke-current"
                 strokeWidth="10"
                 fill="transparent"
               />
@@ -287,12 +303,21 @@ export const FocusTimerPage: React.FC = () => {
             </svg>
 
             {/* Centered Digital Countdown */}
-            <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="text-5xl sm:text-6xl font-extrabold text-white font-mono tracking-tight">
+            <div className="absolute flex flex-col items-center justify-center text-center select-none">
+              <span className="text-5xl sm:text-6xl font-black text-white font-mono tracking-tight drop-shadow-md">
                 {formattedTime}
               </span>
-              <span className={`text-xs uppercase font-bold tracking-widest mt-2 ${MODE_CONFIG[sessionType].color}`}>
-                {MODE_CONFIG[sessionType].name}
+              <div className="flex items-center gap-1.5 mt-2">
+                <span
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ backgroundColor: MODE_CONFIG[sessionType].ringColor }}
+                />
+                <span className={`text-[11px] uppercase font-bold tracking-widest ${MODE_CONFIG[sessionType].color}`}>
+                  {MODE_CONFIG[sessionType].name}
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono mt-1">
+                {Math.round(((durationMinutes * 60 - remainingSeconds) / (durationMinutes * 60)) * 100)}% complete
               </span>
             </div>
           </div>
