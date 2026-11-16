@@ -1,0 +1,387 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum PricingModel {
+  FREE
+  FREEMIUM
+  PAID
+  OPEN_SOURCE
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  MACOS
+  WINDOWS
+  LINUX
+  BROWSER
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum SessionType {
+  POMODORO
+  SHORT_BREAK
+  LONG_BREAK
+  CUSTOM
+}
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RESOLVED
+}
+
+enum FeedbackType {
+  BUG_REPORT
+  UI_UX_SUGGESTION
+  CONTENT_CORRECTION
+  ACCESSIBILITY_ISSUE
+  GENERAL_FEEDBACK
+}
+
+enum ReportContentType {
+  RESOURCE
+  GUIDE
+}
+
+enum WellnessTier {
+  CRITICAL
+  MODERATE
+  BALANCED
+  OPTIMAL
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         UserRole @default(STUDENT)
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  refreshTokens        RefreshToken[]
+  submittedResources   Resource[]            @relation("ResourceSubmitter")
+  verifiedResources    Resource[]            @relation("ResourceVerifier")
+  reviews              ResourceReview[]
+  authoredGuides       DeviceGuide[]
+  focusSessions        FocusSession[]
+  screenTimeLogs       ScreenTimeLog[]
+  screenTimeGoal       ScreenTimeGoal?
+  wellnessAssessments  WellnessAssessment[]
+  challengeEnrollments ChallengeEnrollment[]
+  dailyPlanners        DailyPlanner[]
+  feedbackSubmissions  FeedbackSubmission[]
+  resourceSuggestions  ResourceSuggestion[]
+  contentReports       ContentReport[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique @map("token_hash")
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  resources Resource[]
+
+  @@map("categories")
+}
+
+model Resource {
+  id                String       @id @default(cuid())
+  title             String
+  slug              String       @unique
+  tagline           String
+  description       String
+  websiteUrl        String       @map("website_url")
+  pricingModel      PricingModel @map("pricing_model")
+  platforms         String[]
+  categoryId        String       @map("category_id")
+  isVerified        Boolean      @default(false) @map("is_verified")
+  submittedByUserId String?      @map("submitted_by_user_id")
+  verifiedByUserId  String?      @map("verified_by_user_id")
+  verifiedAt        DateTime?    @map("verified_at")
+  ratingAvg         Float        @default(0.0) @map("rating_avg")
+  ratingCount       Int          @default(0) @map("rating_count")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  category    Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  submittedBy User?            @relation("ResourceSubmitter", fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  verifiedBy  User?            @relation("ResourceVerifier", fields: [verifiedByUserId], references: [id], onDelete: SetNull)
+  reviews     ResourceReview[]
+
+  @@index([categoryId])
+  @@index([pricingModel])
+  @@index([isVerified])
+  @@map("resources")
+}
+
+model ResourceReview {
+  id         String   @id @default(cuid())
+  resourceId String   @map("resource_id")
+  userId     String   @map("user_id")
+  rating     Int
+  reviewText String?  @map("review_text")
+  isApproved Boolean  @default(true) @map("is_approved")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, userId])
+  @@map("resource_reviews")
+}
+
+model DeviceGuide {
+  id               String     @id @default(cuid())
+  title            String
+  slug             String     @unique
+  platform         Platform
+  difficulty       Difficulty @default(BEGINNER)
+  estimatedMinutes Int        @map("estimated_minutes")
+  steps            Json
+  authorId         String     @map("author_id")
+  isPublished      Boolean    @default(false) @map("is_published")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([platform])
+  @@index([isPublished])
+  @@map("device_guides")
+}
+
+model FocusSession {
+  id                String      @id @default(cuid())
+  userId            String      @map("user_id")
+  sessionType       SessionType @default(POMODORO) @map("session_type")
+  durationMinutes   Int         @map("duration_minutes")
+  intention         String?
+  reflection        String?
+  distractionsCount Int         @default(0) @map("distractions_count")
+  focusRating       Int?        @map("focus_rating")
+  completedAt       DateTime    @default(now()) @map("completed_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@map("focus_sessions")
+}
+
+model ScreenTimeLog {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  logDate            DateTime @db.Date @map("log_date")
+  totalMinutes       Int      @map("total_minutes")
+  productiveMinutes  Int      @default(0) @map("productive_minutes")
+  distractingMinutes Int      @default(0) @map("distracting_minutes")
+  pickupsCount       Int      @default(0) @map("pickups_count")
+  categoryBreakdown  Json?    @map("category_breakdown")
+  notes              String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, logDate])
+  @@index([userId, logDate])
+  @@map("screen_time_logs")
+}
+
+model ScreenTimeGoal {
+  id                    String   @id @default(cuid())
+  userId                String   @unique @map("user_id")
+  maxDailyMinutes       Int      @default(360) @map("max_daily_minutes")
+  maxDistractingMinutes Int      @default(120) @map("max_distracting_minutes")
+  targetBedtimeHour     Int      @default(23) @map("target_bedtime_hour")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("screen_time_goals")
+}
+
+model WellnessAssessment {
+  id              String       @id @default(cuid())
+  userId          String       @map("user_id")
+  overallScore    Int          @map("overall_score")
+  dimensionScores Json         @map("dimension_scores")
+  responses       Json
+  calculatedTier  WellnessTier @map("calculated_tier")
+  recommendations Json
+  completedAt     DateTime     @default(now()) @map("completed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, completedAt])
+  @@map("wellness_assessments")
+}
+
+model Challenge {
+  id           String     @id @default(cuid())
+  title        String
+  slug         String     @unique
+  description  String
+  durationDays Int        @map("duration_days")
+  difficulty   Difficulty @default(BEGINNER)
+  badgeIcon    String     @map("badge_icon")
+  isPublished  Boolean    @default(true) @map("is_published")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  enrollments ChallengeEnrollment[]
+
+  @@map("challenges")
+}
+
+model ChallengeEnrollment {
+  id            String          @id @default(cuid())
+  userId        String          @map("user_id")
+  challengeId   String          @map("challenge_id")
+  status        ChallengeStatus @default(ACTIVE)
+  startDate     DateTime        @default(now()) @db.Date @map("start_date")
+  completedDate DateTime?       @db.Date @map("completed_date")
+  currentStreak Int             @default(0) @map("current_streak")
+  completedDays Json            @default("[]") @map("completed_days")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+  @@index([userId, status])
+  @@map("challenge_enrollments")
+}
+
+model DailyPlanner {
+  id                String    @id @default(cuid())
+  userId            String    @map("user_id")
+  planDate          DateTime  @db.Date @map("plan_date")
+  digitalIntention  String    @map("digital_intention")
+  priorityTasks     Json      @default("[]") @map("priority_tasks")
+  shutdownCompleted Boolean   @default(false) @map("shutdown_completed")
+  shutdownAt        DateTime? @map("shutdown_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planDate])
+  @@index([userId, planDate])
+  @@map("daily_planners")
+}
+
+model ResourceSuggestion {
+  id              String           @id @default(cuid())
+  userId          String           @map("user_id")
+  title           String
+  tagline         String
+  description     String
+  websiteUrl      String           @map("website_url")
+  pricingModel    PricingModel     @map("pricing_model")
+  platforms       String[]
+  categoryId      String           @map("category_id")
+  status          SubmissionStatus @default(PENDING)
+  adminNotes      String?          @map("admin_notes")
+  convertedResourceId String?      @map("converted_resource_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("resource_suggestions")
+}
+
+model FeedbackSubmission {
+  id         String           @id @default(cuid())
+  userId     String           @map("user_id")
+  type       FeedbackType
+  title      String
+  details    String
+  pageUrl    String?          @map("page_url")
+  status     SubmissionStatus @default(PENDING)
+  adminNotes String?          @map("admin_notes")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@map("feedback_submissions")
+}
+
+model ContentReport {
+  id          String            @id @default(cuid())
+  userId      String            @map("user_id")
+  contentType ReportContentType @map("content_type")
+  contentId   String            @map("content_id")
+  reason      String
+  details     String?
+  status      SubmissionStatus  @default(PENDING)
+  adminNotes  String?           @map("admin_notes")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([contentType, contentId])
+  @@index([status])
+  @@map("content_reports")
+}
